@@ -37,7 +37,8 @@ To do for Python community
    - Database driver
    - O/R Mapper
    - Another category tools & libralies
-   - Porting from Python2 to Python3
+
+**Porting from Python2 to Python3**
 
 Why now ?
 ==========
