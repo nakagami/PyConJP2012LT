@@ -1,0 +1,490 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Encouragement of porting Python 3</title>
+    
+    <link rel="stylesheet" href="static/s6.css" type="text/css" />
+    <link rel="stylesheet" href="static/pygments.css" type="text/css" />
+<script type="text/javascript" src="static/jquery.js"></script>
+<script type="text/javascript" src="static/jquery.touchwipe.min.js"></script>
+<script type="text/javascript" src="static/s6.js"></script>
+<script type="text/javascript">
+// <![CDATA[
+
+var bodyStyle = {
+    width: '100%',
+    height: '100%',
+    padding: '0',
+    margin: '0',
+    overflow: 'hidden',
+    backgroundColor: 'white',
+};
+
+s6.css('html', bodyStyle);
+s6.css('body', bodyStyle);
+s6.css('.s6 .page.default > h2', {margin:'0'});
+
+function calcMetrics(options) {
+    var html = document.documentElement;
+    var options = s6.opts(options, {
+        width: html.offsetWidth,
+        height: html.offsetHeight,
+        ratio: 0.75,
+        fontSize: 0.1
+    });
+    var left = 0;
+    var top = 0;
+    var width = options.width;
+    var height = options.height;
+
+    if (height / width < options.ratio) {
+        var originalWidth = width;
+        width = height / options.ratio;
+        left = (originalWidth - width) / 2;
+    }
+    else {
+        var originalHeight = height;
+        height = width * options.ratio;
+        top = (originalHeight - height) / 2;
+    }
+
+    return {
+        left: left,
+        top: top,
+        width: width,
+        height: height,
+        fontSize: height * options.fontSize
+    }
+}
+
+var pr;
+s6.attach(s6, 'ready', function ready() {
+    var fontSize = 0.08;
+    var html = document.documentElement;
+    var metrics = calcMetrics({fontSize: fontSize});
+    var startIndex = 0;
+
+    var result;
+    if (location.hash) {
+        startIndex = $('.section').index($(location.hash));
+        if(startIndex < 0) {
+            startIndex = 0;
+        }
+    }
+
+    var container = $('.section')[0];
+    pr = new s6.Presentation({
+            thema: 'sphinx',
+            element: container,
+            width: metrics.width,
+            height: metrics.height,
+            startIndex: startIndex,
+            fontSize: fontSize
+        });
+    pr.style.left = metrics.left + 'px';
+    pr.style.top = metrics.top + 'px';
+    pr.start();
+
+    var indexNoOutline = false;
+
+    pr.funcPages.index.attachPage('click', function(i, element, wrapper) {
+        indexNoOutline = true;
+        setTimeout(function() {
+            indexNoOutline =false
+        }, 1000);
+        wrapper.style.background = '';
+        pr.go(i);
+    });
+
+    pr.funcPages.index.attachPage('mouseover', function(i, element, wrapper) {
+        if (indexNoOutline) return;
+        wrapper.className += ' selected';
+    });
+    
+    pr.funcPages.index.attachPage('mouseout', function(i, element, wrapper) {
+        wrapper.className = 'wrapper';
+    });
+
+    try {
+        var isIframe = !(window.parent == window);
+    } catch(e) {
+        isIframe = true;
+    }
+
+    // add navigation overlay
+    function createNaviArea(id, options){
+        var opts = s6.opts(options, {
+            widthRatio: 1.0,
+            heightRatio: 1.0,
+            dockTo: 'top',
+            label: ''
+        });
+        function calcNaviMetrics(){
+            var html = document.documentElement;
+            var metrics = calcMetrics({fontSize: fontSize});
+            var naviAreaWidth = ((html.offsetWidth - metrics.width) / 2 + (metrics.width * opts.widthRatio));
+            var naviAreaHeight = ((html.offsetHeight - metrics.height) / 2 + (metrics.height * opts.heightRatio));
+            var width = (opts.widthRatio >= 1.0)? html.offsetWidth: naviAreaWidth;
+            var height = (opts.heightRatio >= 1.0)? html.offsetHeight: naviAreaHeight;
+            var left = 0;
+            var top = 0;
+            if(opts.dockTo == 'right') {
+                left = html.offsetWidth - width;
+            }
+            else if(opts.dockTo == 'bottom') {
+                top = html.offsetHeight - height;
+            }
+            return {
+                width: width,
+                height: height,
+                left: left,
+                top: top
+            };
+        }
+        function setMetrics(elem, metrics) {
+            elem.css('position', 'absolute')
+                .css('left',  metrics.left + 'px')
+                .css('top',  metrics.top + 'px')
+                .css('width',  metrics.width + 'px')
+                .css('height',  metrics.height + 'px');
+            return elem;
+        }
+        var naviMetrics = calcNaviMetrics();
+        var elem = $('<div>', {id: id, class: 'navigation-area-'+opts.dockTo});
+        setMetrics(elem, naviMetrics);
+        var label = $('<span>')
+            .css('line-height', naviMetrics.height + 'px')
+            .text(opts.label);
+        elem.append(label);
+        $(window).resize(function(){
+            var naviMetrics = calcNaviMetrics();
+            setMetrics(elem, naviMetrics);
+            label.css('line-height', naviMetrics.height + 'px')
+        });
+        return elem;
+    }
+    var naviIdx  = createNaviArea('idxpage', {heightRatio: 0.1, dockTo: 'top', label: 'index'});
+    var naviBack = createNaviArea('backpage', {heightRatio: 0.1, dockTo: 'bottom', label: 'back'});
+    var naviNext = createNaviArea('nextpage', {widthRatio: 0.1, dockTo: 'right', label: '≫'});
+    var naviPrev = createNaviArea('prevpage', {widthRatio: 0.1, dockTo: 'left', label: '≪'});
+    s6.attach(naviIdx[0],  'click', function() { pr.go('index') });
+    s6.attach(naviBack[0], 'click', 'back', 0, pr);
+    s6.attach(naviNext[0], 'click', 'step', 0, pr);
+    s6.attach(naviPrev[0], 'click', 'prev', 0, pr);
+    $('div.document')
+        .append(naviIdx)
+        .append(naviBack)
+        .append(naviNext)
+        .append(naviPrev);
+
+    // setup mouse events
+    s6.attach(document, 'click', 'step', 0, pr);
+    s6.attach(document, 'keypress Right', 'step', 0, pr);
+    s6.attach(document, 'keypress Left',  'prev', 0, pr);
+    s6.attach(document, 'keypress Up',    function() { pr.go('index') });
+    s6.attach(document, 'keypress Down',  'back', 0, pr);
+
+    // inject 'target=_blank' to link-targets.
+    // prevent paging if click link-target.
+    var clickGuard = function(evt){
+        pr.busy = true;
+        setTimeout(function(){pr.busy = false;}, 1000);
+        return true;
+    }
+    $('a[href]')
+        .attr('target', '_blank')
+        .click(clickGuard)
+        .mousedown(clickGuard)
+        .mouseup(clickGuard)
+        .bind('contextmenu', clickGuard);
+
+    // setup swipe events
+    if($(document).touchwipe) {
+        var wipeSetting = {
+            wipeLeft: function(){ pr.step(); },
+            wipeRight: function(){ pr.prev(); },
+            wipeUp: function(){ pr.go('index'); },
+            wipeDown: function(){ pr.back(); },
+            preventDefaultEvent: true
+        }
+        $(document).touchwipe(wipeSetting);
+        $(pr.element).touchwipe(wipeSetting);
+    }
+
+    // resize window
+    $(window).resize(function(){
+        var html = document.documentElement;
+        var metrics = calcMetrics({fontSize: fontSize});
+        pr.style.left = metrics.left + 'px';
+        pr.style.top = metrics.top + 'px';
+        pr.style.width = metrics.width + 'px';
+        pr.style.height = metrics.height + 'px';
+        pr.style.fontSize = metrics.fontSize + 'px';
+    });
+
+    // handle page number and set to href
+    pr._go  = pr.go;
+    pr.go = function(toIndex) {
+        pr._go(toIndex);
+        if(pr.getPage(toIndex)) {
+            location.href = '#' + $(".section")[toIndex].id; //want to set at paging.
+        }
+    }
+});
+// ]]>
+</script>
+
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="#">pyconjp2012 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body">
+            
+  <div class="section" id="encouragement-of-porting-python-3">
+<h1>Encouragement of porting Python 3<a class="headerlink" href="#encouragement-of-porting-python-3" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="preface">
+<h2>Preface はじめに<a class="headerlink" href="#preface" title="Permalink to this headline">¶</a></h2>
+<p>先ほど、お昼休みに交わされた時の会話</p>
+<blockquote>
+<div><ul class="simple">
+<li>よ「LT するんですか？何の話するんですか？」</li>
+<li>な「Python3 の porting の話だよ」</li>
+<li>よ「えっ、 &#64;aodag さんの前で？」</li>
+<li>な「いーじゃん」</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="profile">
+<h2>Profile （おまえ誰よ）<a class="headerlink" href="#profile" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><dl class="first docutils">
+<dt>Hajime Nakagami</dt>
+<dd><ul class="first simple">
+<li>&#64;hajime_nakagami</li>
+</ul>
+<img alt="images/nakagami.png" src="images/nakagami.png" />
+<ul class="last simple">
+<li>A Python/Django programmer</li>
+<li>BeProud inc.</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="section" id="to-do-for-python-community">
+<h2>To do for Python community<a class="headerlink" href="#to-do-for-python-community" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">Join a User Group ( PyJUG )</p>
+</li>
+<li><p class="first">勉強会に参加する</p>
+</li>
+<li><p class="first">Event staff ( PyCon JP 2012 )</p>
+</li>
+<li><p class="first">Document writing</p>
+</li>
+<li><p class="first">Document translating to Japanese</p>
+</li>
+<li><dl class="first docutils">
+<dt>Development</dt>
+<dd><ul class="first last simple">
+<li>Web Application Framework</li>
+<li>Database driver</li>
+<li>O/R Mapper</li>
+<li>Another category tools &amp; libralies</li>
+<li>Porting from Python2 to Python3</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="section" id="why-now">
+<h2>Why now ?<a class="headerlink" href="#why-now" title="Permalink to this headline">¶</a></h2>
+<p>Python 3.3 can use u&#8221;&#8221; literal.</p>
+<p>Python3</p>
+<div class="highlight-python"><pre>"あいうえお" == u"あいうえお"
+"abc".encode('utf-8') ==  b"abc"</pre>
+</div>
+<p>Python2</p>
+<div class="highlight-python"><pre>"abc" == b"abc"
+u"あいうえお".encode('utf-8') == "あいうえお"</pre>
+</div>
+</div>
+<div class="section" id="document-about-porting">
+<h2>Document about porting<a class="headerlink" href="#document-about-porting" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><dl class="first docutils">
+<dt>Porting Python 2 Code to Python 3</dt>
+<dd><p class="first last"><a class="reference external" href="http://docs.python.org/py3k/howto/pyporting.html">http://docs.python.org/py3k/howto/pyporting.html</a></p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Porting Extension Modules to Python3</dt>
+<dd><p class="first last"><a class="reference external" href="http://docs.python.org/py3k/howto/cporting.html">http://docs.python.org/py3k/howto/cporting.html</a></p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>ライブラリをPython3対応に書き換える（清水川Web）</dt>
+<dd><p class="first last"><a class="reference external" href="http://www.freia.jp/taka/blog/768/index.html">http://www.freia.jp/taka/blog/768/index.html</a></p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>BP Study #54 そろそろ Python3  (by &#64;aodag)</dt>
+<dd><p class="first last"><a class="reference external" href="http://www.slideshare.net/aodag/bpstudy54-python3">http://www.slideshare.net/aodag/bpstudy54-python3</a></p>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="section" id="let-s-try">
+<h2>Let&#8217;s try<a class="headerlink" href="#let-s-try" title="Permalink to this headline">¶</a></h2>
+<p>continue my case</p>
+</div>
+<div class="section" id="case-study-reportlab">
+<h2>Case Study: ReportLab<a class="headerlink" href="#case-study-reportlab" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><dl class="first docutils">
+<dt>ReportLab ( Python library for generating PDFs.)</dt>
+<dd><p class="first last"><a class="reference external" href="http://pypi.python.org/pypi/reportlab">http://pypi.python.org/pypi/reportlab</a></p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>My Repository ( start from Reportlab 2.5 tarball )</dt>
+<dd><p class="first last"><a class="reference external" href="https://github.com/nakagami/reportlab">https://github.com/nakagami/reportlab</a></p>
+</dd>
+</dl>
+</li>
+</ul>
+<div class="highlight-python"><pre>$ git clone git://github.com/nakagami/reportlab.git
+$ cd reportlab/tests
+$ python3 runAll.py</pre>
+</div>
+</div>
+<div class="section" id="case-study-2-pillow-pil">
+<h2>Case Study 2: Pillow (PIL)<a class="headerlink" href="#case-study-2-pillow-pil" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><dl class="first docutils">
+<dt>Pillow ( Python Image Library fork )</dt>
+<dd><p class="first last"><a class="reference external" href="https://github.com/python-imaging/Pillow">https://github.com/python-imaging/Pillow</a></p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>My Repository ( fork from Pillow repository )</dt>
+<dd><p class="first last"><a class="reference external" href="https://github.com/nakagami/Pillow">https://github.com/nakagami/Pillow</a></p>
+</dd>
+</dl>
+</li>
+</ul>
+<div class="highlight-python"><pre>$ git clone git://github.com/nakagami/Pillow.git
+$ cd Pillow
+$ git checkout py33py27
+$ rm -rf build dist
+$ python3 setup.py install
+$ python3 selftests.py</pre>
+</div>
+</div>
+<div class="section" id="id1">
+<h2>感想<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>正直、飽きてきた</li>
+<li>最初いろいろ動かないが、途中からは同じパターンの繰り返し</li>
+<li>古くからあるものは書き方が古くて移植しづらい</li>
+<li>文字列と UNICODE 文字列の扱いがごちゃごちゃなものは難しい</li>
+<li>Python2.7 でも動くように維持した方が移植が楽</li>
+<li>SQLAlchemy のように、2to3 使った対応は変態</li>
+<li>最初に 2to3 を一回使うのはあり（おすすめ）</li>
+<li>Python2.7 と Python3.3 以外のサポートは捨てると楽</li>
+</ul>
+</div>
+<div class="section" id="c">
+<h2>感想（C 拡張）<a class="headerlink" href="#c" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>C 拡張があるものはやっぱり大変</li>
+<li>Python のヘッダーとソースを見て頑張ればなんとかなる</li>
+<li>特に Python.h を読もう</li>
+<li>Python のソースでは Objects ディレクトリの下のコードを読むべし</li>
+<li>Python 2.7 と Python 3 の間では、マクロで両方で動かせるよう考慮されてる</li>
+<li>でも、module の初期化のコードだけは大きく違う</li>
+</ul>
+</div>
+<div class="section" id="id2">
+<h2>感想（狙い目について）<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>多くの人が使っていて、かつコードのメンテナンスがあまりおこなわれてないもの</li>
+<li>pure python で動くもの</li>
+<li>Python2 で十分なテストがあるもの（もしくはテストを書く）</li>
+</ul>
+</div>
+<div class="section" id="python3-in-pycon-jp-2012">
+<h2>Python3 in PyCon JP 2012<a class="headerlink" href="#python3-in-pycon-jp-2012" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><dl class="first docutils">
+<dt>Pythonを取り巻く開発環境</dt>
+<dd><p class="first last"><a class="reference external" href="http://2012.pycon.jp/program/sessions.html#session-16-1100-room357-ja">http://2012.pycon.jp/program/sessions.html#session-16-1100-room357-ja</a></p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Python 3でここまでできる Web プログラミング (by &#64;aodag)</dt>
+<dd><p class="first last"><a class="reference external" href="http://2012.pycon.jp/program/sessions.html#session-16-1515-room433-ja">http://2012.pycon.jp/program/sessions.html#session-16-1515-room433-ja</a></p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Pyramid Sprint (by &#64;aodag)</dt>
+<dd><p class="first last"><a class="reference external" href="https://github.com/Pylons/pyramid/wiki/Sprint-Ideas">https://github.com/Pylons/pyramid/wiki/Sprint-Ideas</a></p>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="section" id="id3">
+<h2>ご清聴ありがとうございました<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<p>Happy Hacking</p>
+</div>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="#">pyconjp2012 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+<div class="footer">
+    <span>Encouragement of porting Python 3 :: 2012, Hajime Nakagami</span><br />
+    <span class="hidden">操作方法: 上下左右キーで操作です</span>
+</div>
+
+  </body>
+</html>
